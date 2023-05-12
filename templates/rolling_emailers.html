@@ -4,11 +4,55 @@
         <li>{{ emailer.prefix }}
             <ul>
                 <li><a href="/rolling_emailer/{{emailer.id}}/run">Run.</a></li>
+                <li><a href="/rolling_emailer/{{emailer.id}}/delete">Delete</a></li>
                 <li>Webhook: <a target="_blank" href="/rolling_emailer/hook/{{ emailer.webhook }}">{{ emailer.webhook }}</a></li>
                 <li>ID: {{ emailer.id }}</li>
             </ul>
-            
+            <form action="/rolling_emailer" method="post">
+                <input type="text" value="{{ emailer.id }}" name="id" hidden>
+                <label for="prefix">Prefix:</label>
+                <input type="text" id="prefix" name="prefix" value="{{ emailer.prefix }}" required><br>
+        
+                <label for="trigger_tag_id">Trigger Tag ID:</label>
+                <input type="text" id="trigger_tag_id" name="trigger_tag_id" value="{{ emailer.trigger_tag_id }}" required><br>
+        
+                <label for="target_view">Target View:</label>
+                <input type="text" id="target_view" name="target_view" value="{{ emailer.target_view }}" required><br>
+        
+                <label for="message_view">Message View:</label>
+                <input type="text" id="message_view" name="message_view" value="{{ emailer.message_view }}" required><br>
+        
+                <label for="end_tag_id">End Tag ID:</label>
+                <input type="text" id="end_tag_id" name="end_tag_id" value="{{ emailer.end_tag_id }}" required><br>
+
+                <label for="action_network_api_key">Action Network API Key Env Name:</label>
+                <input type="text" id="action_network_api_key" name="action_network_api_key" value="{{ emailer.action_network_api_key }}" required><br>
+        
+                <input type="submit" value="Submit">
+            </form>
         </li>
     {% endfor %}
 </ul>
 <!-- Create A New Rolling Emailer -->
+<h1>New</h1>
+<form action="/rolling_emailer" method="post">
+    <label for="prefix">Prefix:</label>
+    <input type="text" id="prefix" name="prefix" required><br>
+
+    <label for="trigger_tag_id">Trigger Tag ID:</label>
+    <input type="text" id="trigger_tag_id" name="trigger_tag_id" required><br>
+
+    <label for="target_view">Target View:</label>
+    <input type="text" id="target_view" name="target_view" required><br>
+
+    <label for="message_view">Message View:</label>
+    <input type="text" id="message_view" name="message_view" required><br>
+
+    <label for="end_tag_id">End Tag ID:</label>
+    <input type="text" id="end_tag_id" name="end_tag_id" required><br>
+
+    <label for="action_network_api_key">Action Network API Key Env Name:</label>
+    <input type="text" id="action_network_api_key" name="action_network_api_key" value="ACTION_NETWORK_API" required><br>
+
+    <input type="submit" value="Submit">
+</form>

@@ -206,15 +206,15 @@ def rolling_emailers():
         if request.content_type == "application/json":
             body = request.json
         else:
-            body = request.form
-        emailer = RollingEmailer(
-            prefix=body.get("prefix"),
-            trigger_tag_id=body.get("trigger_tag_id"),
-            target_view=body.get("target_view"),
-            message_view=body.get("message_view"),
-            end_tag_id=body.get("end_tag_id"),
-            action_network_api_key=body.get("action_network_api_key")
-        )
+            body = request.form.to_dict()
+        print(body)
+        if body.get('id'):
+            emailer = RollingEmailer.query.get(body['id'])
+        else:
+            emailer = RollingEmailer()
+        for attr in ["prefix", "trigger_tag_id", "target_view", "message_view", "end_tag_id", "action_network_api_key"]:
+            if body.get(attr):
+                setattr(emailer, attr, body.get(attr))
         db.session.add(emailer)
         db.session.commit()
         if request.content_type == "application/json":
@@ -228,6 +228,14 @@ def rolling_emailers():
 def rolling_emailer(id):
     emailer = RollingEmailer.query.get(id)
     process_emailer.delay(emailer.to_dict())
+    return redirect("/rolling_emailer")
+
+@app.route("/rolling_emailer/<int:id>/delete")
+@roles_required('Admin')
+def rolling_emailer_delete(id):
+    emailer = RollingEmailer.query.get(id)
+    db.session.delete(emailer)
+    db.session.commit()
     return redirect("/rolling_emailer")
 
 @app.route("/rolling_emailer/hook/<string:webhook>")

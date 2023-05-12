@@ -42,7 +42,10 @@ class RollingEmailer():
     
     def assign_target(self, person):
         if person["custom_fields"]:
-            target_index = int(person["custom_fields"].get(f"{self.prefix}_target_index"))
+            if person["custom_fields"].get(f"{self.prefix}_target_index"):
+                target_index = int(person["custom_fields"].get(f"{self.prefix}_target_index"))
+            else:
+                target_index = 0
         else:
             target_index = 0
         # Get next target in view
