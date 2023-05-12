@@ -1,0 +1,14 @@
+<h1>Rolling Emailers</h1>
+<ul>
+    {% for emailer in emailers %}
+        <li>{{ emailer.prefix }}
+            <ul>
+                <li><a href="/rolling_emailer/{{emailer.id}}/run">Run.</a></li>
+                <li>Webhook: <a target="_blank" href="/rolling_emailer/hook/{{ emailer.webhook }}">{{ emailer.webhook }}</a></li>
+                <li>ID: {{ emailer.id }}</li>
+            </ul>
+            
+        </li>
+    {% endfor %}
+</ul>
+<!-- Create A New Rolling Emailer -->
