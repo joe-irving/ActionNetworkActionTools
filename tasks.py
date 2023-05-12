@@ -1,7 +1,7 @@
 from celery import Celery
 from action_network_rolling_emails import RollingEmailer as RollingEmailerProcess
 
-celery = Celery("tasks", broker="redis://localhost:6379")
+celery = Celery("tasks", broker="redis://redis:6379")
 
 @celery.task()
 def process_emailer(rolling_emailer):

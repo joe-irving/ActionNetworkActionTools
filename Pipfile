@@ -15,10 +15,11 @@ flask-migrate = "*"
 python-dotenv = "*"
 pyairtable = "*"
 celery = {extras = ["redis"], version = "*"}
+gunicorn = "*"
 
 [dev-packages]
 pylint = "*"
 
 [requires]
 python_version = "3.8"
-python_full_version = "3.8.10"
+python_full_version = "3.8.16"

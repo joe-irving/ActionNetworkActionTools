@@ -37,8 +37,8 @@ class ConfigClass(object):
     USER_EMAIL_SENDER_EMAIL = os.environ.get("USER_EMAIL_SENDER_EMAIL")
 
     # Celery
-    CELERY_BROKER_URL='redis://localhost:6379',
-    CELERY_RESULT_BACKEND='redis://localhost:6379'
+    CELERY_BROKER_URL='redis://redis:6379',
+    CELERY_RESULT_BACKEND='redis://redis:6379'
 
 app = Flask(__name__)
 app.config.from_object(__name__+'.ConfigClass')
