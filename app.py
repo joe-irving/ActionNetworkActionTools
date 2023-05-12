@@ -3,6 +3,7 @@ from flask_babelex import Babel
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_user import current_user, login_required, roles_required, UserManager, UserMixin
+from flask_user.signals import user_registered
 from action_network import ActionNetwork
 from tasks import process_emailer
 import os
@@ -145,6 +146,18 @@ with app.app_context():
 @app.route("/")
 def index():
     return "Hello world"
+
+@user_registered.connect_via(app)
+def _after_registration_hook(sender, user, **extra):
+    users = User.query.all()
+    if len(users) == 1:
+        make_admin(user.id)
+
+# def setup():
+#     users = User.query.all()
+#     if len(users) != 0:
+#         return redirect("/")
+    
 
 @app.route("/members")
 @roles_required('Admin')
