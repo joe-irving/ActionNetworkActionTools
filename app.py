@@ -149,9 +149,11 @@ def index():
 
 @user_registered.connect_via(app)
 def _after_registration_hook(sender, user, **extra):
+    print(f"User registered: {user.email}")
     users = User.query.all()
+    print(f"Users in system: {len(users)}")
     if len(users) == 1:
-        make_admin(user.id)
+        add_role(user, "Admin")
 
 # def setup():
 #     users = User.query.all()
@@ -169,14 +171,17 @@ def manage_members():
 @roles_required('Admin')
 def make_admin(id):
     user = User.query.get(id)
-    if not Role.query.filter(Role.name == "Admin").first():
-        role = Role(name="Admin")
+    add_role(user, "Admin")
+    return redirect("/members")
+
+def add_role(user, role_name):
+    if not Role.query.filter(Role.name == role_name).first():
+        role = Role(name=role_name)
         db.session.add(role)
     else:
-        role = Role.query.filter(Role.name == "Admin").first()
+        role = Role.query.filter(Role.name == role_name).first()
     user.roles.append(role)
     db.session.commit()
-    return redirect("/members")
 
 @app.route("/action_network_credentials", methods=["POST", "GET"])
 @roles_required('Admin')
