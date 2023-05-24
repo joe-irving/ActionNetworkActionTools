@@ -7,7 +7,7 @@ load_dotenv()
 
 
 class RollingEmailer():
-    def __init__(self, trigger_tag_id, target_view, message_view, prefix, end_tag_id, an_key="ACTION_NETWORK_API", airtable_key="AIRTABLE_API_KEY"):
+    def __init__(self, trigger_tag_id, target_view, message_view, prefix, end_tag_id, an_key="ACTION_NETWORK_API", airtable_key="AIRTABLE_API_KEY", targets_each=1):
         self.an = ActionNetwork(key=os.environ.get(an_key))
         self.trigger_tag_id = trigger_tag_id
         self.airtable_base = os.environ.get("AIRTABLE_BASE")
@@ -18,6 +18,7 @@ class RollingEmailer():
         self.prefix = prefix
         self.end_tag_id = end_tag_id
         self.airtable = airtable.Api(os.environ.get(airtable_key))
+        self.targets_each = targets_each
 
     def log(self, text):
         print(f"{self.prefix}: {text}")
@@ -46,6 +47,7 @@ class RollingEmailer():
             self.an._delete(tagging["_links"]["self"]["href"])
 
     def assign_target(self, person):
+        self.current_person = person
         if person["custom_fields"]:
             if person["custom_fields"].get(f"{self.prefix}_target_index"):
                 target_index = int(person["custom_fields"].get(
@@ -55,8 +57,7 @@ class RollingEmailer():
         else:
             target_index = 0
         # Get next target in view
-        target = self.airtable.all(self.airtable_base, self.airtable_target_table,
-                                   view=self.airtable_target_view, max_records=1)[0]
+        target = self._get_target()
         # Get next message in view
         messages = self.airtable.all(
             self.airtable_base,
@@ -68,11 +69,11 @@ class RollingEmailer():
             messages) == 0 else messages[0]['fields'].get('HTML Content')
         # Create object to update person with prefix
         update = {
-            "next_email": target['fields'].get('Email'),
-            "next_first_name": target['fields'].get('First Name'),
-            "next_last_name": target['fields'].get('Last Name'),
-            "next_position": target['fields'].get('Position'),
-            "next_phone": target['fields'].get('Phone'),
+            "next_email": target['email'],
+            "next_first_name": target['first_name'],
+            "next_last_name": target['last_name'],
+            "next_position": target['position'],
+            "next_phone": target['phone'],
             "next_message": message,
             "target_index": target_index + 1
         }
@@ -80,13 +81,14 @@ class RollingEmailer():
         person_updated = self.an.put(
             f"people/{person['id']}", json=self._make_person_update(update)).json()
         # Update target on airtable
-        contacts_sent_to = list(target['fields'].get(
-            'Contact Sent To')) if target['fields'].get('Contact Sent To') else []
-        contacts_sent_to.append(person["_links"]["self"]["href"])
-        self.airtable.update(self.airtable_base, self.airtable_target_table, target['id'], {
-            "Emails Sent Manual": int(target['fields'].get('Emails Sent Manual')) + 1,
-            "Contact Sent To": contacts_sent_to
-        }, typecast=True)
+        for at_target in self.targets:
+            contacts_sent_to = list(at_target['fields'].get(
+                'Contact Sent To')) if at_target['fields'].get('Contact Sent To') else []
+            contacts_sent_to.append(person["_links"]["self"]["href"])
+            self.airtable.update(self.airtable_base, self.airtable_target_table, at_target['id'], {
+                "Emails Sent Manual": int(at_target['fields'].get('Emails Sent Manual')) + 1,
+                "Contact Sent To": contacts_sent_to
+            }, typecast=True)
         # add end tag
         self.an.post(f"tags/{self.end_tag_id}/taggings", json={
             "_links": {
@@ -104,6 +106,34 @@ class RollingEmailer():
         for key in update:
             person_update["custom_fields"][f"{self.prefix}_{key}"] = update[key]
         return person_update
+
+    def _get_target(self):
+        self.targets = self.airtable.all(self.airtable_base, self.airtable_target_table,
+                                         view=self.airtable_target_view, max_records=self.targets_each)
+        target_list = {
+            "email": [],
+            "first_name": [],
+            "last_name": [],
+            "position": [],
+            "phone": []
+        }
+
+        target_output = {}
+
+        for target in self.targets:
+            target_list["email"].append(str(target['fields'].get('Email')))
+            target_list["first_name"].append(str(target['fields'].get(
+                'First Name')))
+            target_list["last_name"].append(
+                str(target['fields'].get('Last Name')))
+            target_list["phone"].append(str(target['fields'].get('Phone')))
+            target_list["position"].append(
+                str(target['fields'].get('Position')))
+
+        for key in target_list:
+            target_output[key] = ", ".join(target_list[key])
+
+        return target_output
 
 
 if __name__ == "__main__":

@@ -13,7 +13,8 @@ def process_emailer(rolling_emailer):
         rolling_emailer["message_view"],
         rolling_emailer["prefix"],
         rolling_emailer["end_tag_id"],
-        an_key=rolling_emailer["action_network_api_key"]
+        an_key=rolling_emailer["action_network_api_key"],
+        targets_each=rolling_emailer["targets_each"]
     )
     return process_tool.process()
 
