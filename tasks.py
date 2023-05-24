@@ -3,6 +3,7 @@ from action_network_rolling_emails import RollingEmailer as RollingEmailerProces
 
 celery = Celery("tasks", broker="redis://redis:6379")
 
+
 @celery.task()
 def process_emailer(rolling_emailer):
     print("Process Emailer Starting")
@@ -11,7 +12,8 @@ def process_emailer(rolling_emailer):
         rolling_emailer["target_view"],
         rolling_emailer["message_view"],
         rolling_emailer["prefix"],
-        rolling_emailer["end_tag_id"]
+        rolling_emailer["end_tag_id"],
+        an_key=rolling_emailer["action_network_api_key"]
     )
     return process_tool.process()
 
