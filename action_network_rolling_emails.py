@@ -5,9 +5,10 @@ import pyairtable as airtable
 
 load_dotenv()
 
+
 class RollingEmailer():
     def __init__(self, trigger_tag_id, target_view, message_view, prefix, end_tag_id, an_key="ACTION_NETWORK_API", airtable_key="AIRTABLE_API_KEY"):
-        self.an = ActionNetwork(key = os.environ.get(an_key))
+        self.an = ActionNetwork(key=os.environ.get(an_key))
         self.trigger_tag_id = trigger_tag_id
         self.airtable_base = os.environ.get("AIRTABLE_BASE")
         self.airtable_target_table = os.environ.get("AIRTABLE_TARGET_TABLE")
@@ -17,47 +18,54 @@ class RollingEmailer():
         self.prefix = prefix
         self.end_tag_id = end_tag_id
         self.airtable = airtable.Api(os.environ.get(airtable_key))
-    
+
+    def log(self, text):
+        print(f"{self.prefix}: {text}")
+
     def process(self):
         taggings = self.new_taggings()
-        print(f"Processing {len(taggings)} new taggings.")
+        self.log(f"Processing {len(taggings)} new taggings.")
         people = self.new_people(taggings)
         for person in people:
-           self.assign_target(person)
+            self.assign_target(person)
         self.delete_taggings(taggings)
-        print("Processing done.")
+        self.log("Processing done.")
         return len(people)
-    
+
     def new_taggings(self):
         taggings = self.an.get_all(f"tags/{self.trigger_tag_id}/taggings")
-        return taggings        
+        return taggings
 
     def new_people(self, taggings):
-        people = [self.an.get("people", tagging["person_id"]) for tagging in taggings]
+        people = [self.an.get("people", tagging["person_id"])
+                  for tagging in taggings]
         return people
-    
+
     def delete_taggings(self, taggings):
         for tagging in taggings:
             self.an._delete(tagging["_links"]["self"]["href"])
-    
+
     def assign_target(self, person):
         if person["custom_fields"]:
             if person["custom_fields"].get(f"{self.prefix}_target_index"):
-                target_index = int(person["custom_fields"].get(f"{self.prefix}_target_index"))
+                target_index = int(person["custom_fields"].get(
+                    f"{self.prefix}_target_index"))
             else:
                 target_index = 0
         else:
             target_index = 0
         # Get next target in view
-        target = self.airtable.all(self.airtable_base, self.airtable_target_table, view=self.airtable_target_view, max_records=1)[0]
+        target = self.airtable.all(self.airtable_base, self.airtable_target_table,
+                                   view=self.airtable_target_view, max_records=1)[0]
         # Get next message in view
         messages = self.airtable.all(
             self.airtable_base,
             self.airtable_message_table,
             view=self.airtable_message_view,
             formula=f"OR({{Pin}}=TRUE(), {{Previous Emails}}={target_index})"
-            )
-        message = "" if len(messages) == 0 else messages[0]['fields'].get('HTML Content')
+        )
+        message = "" if len(
+            messages) == 0 else messages[0]['fields'].get('HTML Content')
         # Create object to update person with prefix
         update = {
             "next_email": target['fields'].get('Email'),
@@ -69,9 +77,11 @@ class RollingEmailer():
             "target_index": target_index + 1
         }
         # update person
-        person_updated = self.an.put(f"people/{person['id']}", json=self._make_person_update(update)).json()
+        person_updated = self.an.put(
+            f"people/{person['id']}", json=self._make_person_update(update)).json()
         # Update target on airtable
-        contacts_sent_to = list(target['fields'].get('Contact Sent To')) if target['fields'].get('Contact Sent To') else []
+        contacts_sent_to = list(target['fields'].get(
+            'Contact Sent To')) if target['fields'].get('Contact Sent To') else []
         contacts_sent_to.append(person["_links"]["self"]["href"])
         self.airtable.update(self.airtable_base, self.airtable_target_table, target['id'], {
             "Emails Sent Manual": int(target['fields'].get('Emails Sent Manual')) + 1,
@@ -86,7 +96,7 @@ class RollingEmailer():
             }
         })
         return person_updated
-    
+
     def _make_person_update(self, update):
         person_update = {
             "custom_fields": {}
@@ -94,8 +104,7 @@ class RollingEmailer():
         for key in update:
             person_update["custom_fields"][f"{self.prefix}_{key}"] = update[key]
         return person_update
-    
+
 
 if __name__ == "__main__":
     pass
-    
