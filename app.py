@@ -262,7 +262,7 @@ def rolling_emailers():
             emailer = RollingEmailer.query.get(body['id'])
         else:
             emailer = RollingEmailer()
-        for attr in ["prefix", "trigger_tag_id", "target_view", "message_view", "end_tag_id", "action_network_api_key", "targets_each"]:
+        for attr in ["prefix", "trigger_tag_id", "target_view", "message_view", "end_tag_id", "action_network_api_key", "targets_each", "webhook"]:
             if body.get(attr):
                 setattr(emailer, attr, body.get(attr))
         db.session.add(emailer)
@@ -295,8 +295,11 @@ def rolling_emailer_delete(id):
 @app.route("/rolling_emailer/hook/<string:webhook>")
 def rolling_emailer_hook(webhook):
     emailer = RollingEmailer.query.filter_by(webhook=webhook).first()
-    process_emailer.delay(emailer.to_dict())
-    return emailer.to_dict(public=True)
+    if emailer:
+        process_emailer.delay(emailer.to_dict())
+        return emailer.to_dict(public=True)
+    else:
+        return {"error": "Not found"}
 
 
 if __name__ == "__main__":
