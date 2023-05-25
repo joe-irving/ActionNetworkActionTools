@@ -2,12 +2,13 @@ from action_network import ActionNetwork
 from dotenv import load_dotenv
 import os
 import pyairtable as airtable
+from datetime import datetime
 
 load_dotenv()
 
 
 class RollingEmailer():
-    def __init__(self, trigger_tag_id, target_view, message_view, prefix, end_tag_id, an_key="ACTION_NETWORK_API", airtable_key="AIRTABLE_API_KEY", targets_each=1):
+    def __init__(self, trigger_tag_id, target_view, message_view, prefix, end_tag_id, an_key="ACTION_NETWORK_API", airtable_key="AIRTABLE_API_KEY", targets_each=1, delay_mins=0):
         self.an = ActionNetwork(key=os.environ.get(an_key))
         self.trigger_tag_id = trigger_tag_id
         self.airtable_base = os.environ.get("AIRTABLE_BASE")
@@ -19,18 +20,29 @@ class RollingEmailer():
         self.end_tag_id = end_tag_id
         self.airtable = airtable.Api(os.environ.get(airtable_key))
         self.targets_each = targets_each
+        self.delay_mins = delay_mins
 
     def log(self, text):
         print(f"{self.prefix}: {text}")
 
     def process(self):
         taggings = self.new_taggings()
+        processed_taggings = []
         self.log(f"Processing {len(taggings)} new taggings.")
         people = self.new_people(taggings)
-        for person in people:
-            self.assign_target(person)
-        self.delete_taggings(taggings)
-        self.log("Processing done.")
+        for i in range(len(people)):
+            tagging = taggings[i]
+            target_index = self._get_target_index(people[i])
+            difference = datetime.now() - \
+                datetime.strptime(
+                    tagging['modified_date'], '%Y-%m-%dT%H:%M:%SZ')
+            if target_index == 0 or (difference.total_seconds() / 60) > self.delay_mins:
+                self.assign_target(people[i])
+                self.an._delete(tagging["_links"]["self"]["href"])
+                processed_taggings.append(tagging)
+        # self.delete_taggings(taggings)
+        self.log(
+            f"Processing complete for {len(processed_taggings)} taggings.")
         return len(people)
 
     def new_taggings(self):
@@ -48,14 +60,7 @@ class RollingEmailer():
 
     def assign_target(self, person):
         self.current_person = person
-        if person["custom_fields"]:
-            if person["custom_fields"].get(f"{self.prefix}_target_index"):
-                target_index = int(person["custom_fields"].get(
-                    f"{self.prefix}_target_index"))
-            else:
-                target_index = 0
-        else:
-            target_index = 0
+        target_index = self._get_target_index(person)
         # Get next target in view
         target = self._get_target()
         # Get next message in view
@@ -134,6 +139,17 @@ class RollingEmailer():
             target_output[key] = ", ".join(target_list[key])
 
         return target_output
+
+    def _get_target_index(self, person):
+        if person["custom_fields"]:
+            if person["custom_fields"].get(f"{self.prefix}_target_index"):
+                target_index = int(person["custom_fields"].get(
+                    f"{self.prefix}_target_index"))
+            else:
+                target_index = 0
+        else:
+            target_index = 0
+        return target_index
 
 
 if __name__ == "__main__":

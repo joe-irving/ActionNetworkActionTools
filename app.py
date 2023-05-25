@@ -137,6 +137,7 @@ class RollingEmailer(db.Model):
     message_view = db.Column(db.String)
     end_tag_id = db.Column(db.String)
     targets_each = db.Column(db.Integer, default=1)
+    delay_mins = db.Column(db.Integer, default=0)
 
     # Name of .env variable
     action_network_api_key = db.Column(db.String)
@@ -160,7 +161,8 @@ class RollingEmailer(db.Model):
                 'end_tag_id': self.end_tag_id,
                 'action_network_api_key': self.action_network_api_key,
                 'webhook': self.webhook,
-                'targets_each': self.targets_each
+                'targets_each': self.targets_each,
+                'delay_mins': self.delay_mins
             }
 
 
@@ -262,7 +264,7 @@ def rolling_emailers():
             emailer = RollingEmailer.query.get(body['id'])
         else:
             emailer = RollingEmailer()
-        for attr in ["prefix", "trigger_tag_id", "target_view", "message_view", "end_tag_id", "action_network_api_key", "targets_each", "webhook"]:
+        for attr in ["prefix", "trigger_tag_id", "target_view", "message_view", "end_tag_id", "action_network_api_key", "targets_each", "webhook", "delay_mins"]:
             if body.get(attr):
                 setattr(emailer, attr, body.get(attr))
         db.session.add(emailer)

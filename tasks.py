@@ -14,7 +14,8 @@ def process_emailer(rolling_emailer):
         rolling_emailer["prefix"],
         rolling_emailer["end_tag_id"],
         an_key=rolling_emailer["action_network_api_key"],
-        targets_each=rolling_emailer["targets_each"]
+        targets_each=rolling_emailer["targets_each"],
+        delay_mins=rolling_emailer["delay_mins"]
     )
     return process_tool.process()
 
